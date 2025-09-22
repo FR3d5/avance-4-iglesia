@@ -38,7 +38,7 @@ function init() {
 
     // Cargar modelo GLB
     const loader = new GLTFLoader();
-    loader.load('modelos/romano2.glb', function (gltf) {
+    loader.load('modelos/romano.glb', function (gltf) {
         const model = gltf.scene;
         scene.add(model);
 

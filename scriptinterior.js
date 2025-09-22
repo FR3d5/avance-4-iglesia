@@ -1,4 +1,4 @@
- import * as THREE from 'https://esm.sh/three@0.161.0';
+    import * as THREE from 'https://esm.sh/three@0.161.0';
     import { GLTFLoader } from 'https://esm.sh/three@0.161.0/examples/jsm/loaders/GLTFLoader.js';
     import { PointerLockControls } from 'https://esm.sh/three@0.161.0/examples/jsm/controls/PointerLockControls.js';
 
@@ -6,11 +6,14 @@
     let clock;
     
     // Variables para el movimiento del jugador
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
     let moveForward = false;
     let moveBackward = false;
     let moveLeft = false;
     let moveRight = false;
     
+    // Elemento del overlay
     const overlay = document.getElementById('overlay');
 
     init();
@@ -21,7 +24,7 @@
         scene.background = new THREE.Color(0x333333);
 
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-        camera.position.set(0, 1.6, 0);
+        camera.position.set(0, -5, 0);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -48,15 +51,9 @@
         dirLight.position.set(10, 10, 5);
         scene.add(dirLight);
 
-        // --- CÓDIGO CLAVE PARA CARGAR UN SOLO MODELO ---
-        const repoName = 'avance-4-iglesia'; 
-        // Cambia este nombre al modelo que quieras cargar en esta página
-        const modelName = 'PARTEINTERIORIGLESIAFINAL1.glb'; 
+        // --- CÓDIGO CLAVE PARA CARGAR EL MODELO ---
         const loader = new GLTFLoader();
-        // La ruta es absoluta, empezando desde la raíz del repositorio
-        const modelPath = `/${repoName}/modelos/${modelName}`;
-        
-        loader.load(modelPath, function (gltf) {
+        loader.load('./modelos/parteinterior.glb', function (gltf) {
             const model = gltf.scene;
             scene.add(model);
             
@@ -67,17 +64,19 @@
                 action.play();
             }
 
-            // Ajustar la cámara al modelo cargado
+            // Para ajustar la cámara al centro del modelo, como lo tenías en tu código original
             const box = new THREE.Box3().setFromObject(model);
             const center = new THREE.Vector3();
             box.getCenter(center);
             
-            camera.position.set(center.x, center.y + 1.6, center.z);
+            // Ajustar la posición inicial de la cámara
+            camera.position.set(center.x-50, center.y -70, center.z);
+            camera.rotation.y=-1.6;
             controls.getObject().position.copy(camera.position);
 
-            console.log(`¡Modelo ${modelName} cargado con éxito!`);
+            console.log("¡Modelo 3D cargado con éxito!");
         }, undefined, function (error) {
-            console.error(`Ocurrió un error al cargar el modelo ${modelName}:`, error);
+            console.error('An error happened:', error);
         });
 
         // Oyentes de eventos para el teclado
@@ -113,7 +112,7 @@
         const delta = clock.getDelta();
 
         // Aplicamos el movimiento usando los controles
-        const speed = 5; 
+        const speed = 10; // Ajusta la velocidad de movimiento
         if (moveForward) controls.moveForward(speed * delta);
         if (moveBackward) controls.moveForward(-speed * delta);
         if (moveLeft) controls.moveRight(-speed * delta);
