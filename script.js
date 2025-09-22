@@ -38,7 +38,7 @@ function init() {
 
     // Cargar modelo GLB
     const loader = new GLTFLoader();
-    loader.load('./modelos/esena5.glb', function (gltf) {
+    loader.load('modelos/esena5.glb', function (gltf) {
         const model = gltf.scene;
         scene.add(model);
 
