@@ -1,33 +1,85 @@
-import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.161.0/three.module.js';
-var scene;
-var camera;
-var renderer;
-var cube;
-var cube1;
-var cor5=0;
+import * as THREE from 'https://esm.sh/three@0.161.0';
+import { GLTFLoader } from 'https://esm.sh/three@0.161.0/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'https://esm.sh/three@0.161.0/examples/jsm/controls/OrbitControls.js';
+
+let camera, scene, renderer, controls;
+let mixer;
+const clock = new THREE.Clock();
+
+init();
+animate();
 
 function init() {
+    // Escena
     scene = new THREE.Scene();
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 10;
+    // Luces
+    const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+    dirLight.position.set(0, 20, 10);
+    scene.add(dirLight);
 
-    renderer = new THREE.WebGLRenderer({alpha:true, antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    document.body.appendChild(renderer.domElement);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 3);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(5, 5, 5);
-    scene.add(directionalLight);
+    // Renderizador
+    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth*0.15, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-    cubo();
-    animate();
+    // Cámara
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,0.1,2000);
 
-    window.addEventListener('resize', onWindowResize, false);
+    // Controles
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enableZoom = true;
+    controls.enablePan = true;
+
+    // Cargar modelo GLB
+    const loader = new GLTFLoader();
+    loader.load('./modelos/romano2.glb', function (gltf) {
+        const model = gltf.scene;
+        scene.add(model);
+
+        // Animaciones
+        if (gltf.animations && gltf.animations.length) {
+            mixer = new THREE.AnimationMixer(model);
+            const action = mixer.clipAction(gltf.animations[0]);
+            action.play();
+        }
+
+        model.traverse(function (child) {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
+        model.rotation.y = 4.5;
+        model.scale.set(61, 21, 61);
+
+        // Ajustar cámara y controles al centro del modelo
+        const box = new THREE.Box3().setFromObject(model);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        camera.position.set(center.x+3, center.y + 5, center.z + 20);
+        controls.target.copy(center);
+        controls.update();
+    });
+
+    // Redimensionamiento
+    window.addEventListener('resize', onWindowResize);
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
+
+    //controls.update(); 
+    renderer.render(scene, camera);
 }
 
 function onWindowResize() {
@@ -36,44 +88,48 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function animate() {
-    requestAnimationFrame(animate);
+var abrirBotones = document.querySelectorAll('a[id^="abrir-modal-"]');
+    var cerrarBotones = document.querySelectorAll('.cerrar-modal');
+    var modales = document.querySelectorAll('.modal');
 
-    if (cube) {
-        cube.rotation.y += 0.01;
+    // Función para abrir un modal
+    function abrirModal(modalId) {
+        var modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'block';
+        }
     }
-    if (cube1) {
-        cube1.rotation.y -= 0.01;
+
+    // Función para cerrar un modal
+    function cerrarModal(modalElement) {
+        modalElement.style.display = 'none';
     }
-if(cor5<=1){
-   cube.scale.x +=0.02;
-   cube.scale.y +=0.02;
-   cube.scale.z +=0.02;
-   cor5+=0.1;
- }else{if(cor5<=2.2){
-   cube.scale.x -=0.02;
-   cube.scale.y -=0.02;
-   cube.scale.z -=0.02;
-   cor5+=0.1;
- }else{cor5=0;}}
-    renderer.render(scene, camera);
-}
 
-function cubo() {
-    const geometry = new THREE.BoxGeometry(2, 2, 2);
-    // Material Phong para que refleje la luz
-    const globalTextureLoader = new THREE.TextureLoader();
-    const material = new THREE.MeshPhongMaterial({map: globalTextureLoader.load('https://cdn.glitch.global/18d5f7bf-78b4-4b5e-b976-d7ec84277e1b/Imagen%20de%20WhatsApp%202025-07-06%20a%20las%2020.22.56_34aa8965.jpg?v=1751848072479'),color:0xffffff,shinines:50});
-    cube = new THREE.Mesh(geometry, material);
-    cube1 = new THREE.Mesh(geometry, material);
+    // Agregar evento a cada botón de "abrir"
+    abrirBotones.forEach(btn => {
+        btn.addEventListener('click', (event) => {
+            event.preventDefault(); // Evita que el enlace salte
+            // Obtiene el ID del modal a abrir del ID del enlace
+            const modalId = btn.id.replace('abrir-', '');
+            abrirModal(modalId);
+        });
+    });
 
-    cube.position.set(-10, 4, 0);
-    cube1.position.set(-10, -4, 0);
+    // Agregar evento a cada botón de "cerrar" (la X)
+    cerrarBotones.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const modal = btn.closest('.modal');
+            if (modal) {
+                cerrarModal(modal);
+            }
+        });
+    });
 
-    scene.add(cube);
-    scene.add(cube1);
-
-}
-
-// Asegúrate de que el DOM esté completamente cargado antes de inicializar Three.js
-window.onload = init;
+    // Cerrar el modal al hacer clic fuera de él
+    window.addEventListener('click', (event) => {
+        modales.forEach(modal => {
+            if (event.target === modal) {
+                cerrarModal(modal);
+            }
+        });
+    });

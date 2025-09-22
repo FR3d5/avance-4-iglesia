@@ -1,37 +1,85 @@
-
 import * as THREE from 'https://esm.sh/three@0.161.0';
 import { GLTFLoader } from 'https://esm.sh/three@0.161.0/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'https://esm.sh/three@0.161.0/examples/jsm/controls/OrbitControls.js';
 
-let scene, camera, renderer, cube;
-const loader = new GLTFLoader();
-let isMouseDown = false;
-let prevMouseX = 0;
-let prevMouseY = 0;
+let camera, scene, renderer, controls;
+let mixer;
+const clock = new THREE.Clock();
+
+init();
+animate();
 
 function init() {
+    // Escena
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(25, 10, 20);
 
+    // Luces
+    const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+    dirLight.position.set(0, 20, 10);
+    scene.add(dirLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
+    scene.add(ambientLight);
+
+    // Renderizador
     renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 5);
-    dirLight.position.set(5, 5, 5);
-    scene.add(dirLight);
+    // Cámara
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight,0.1,2000);
 
-    cargarModelo();
-    animate();
-    luzpuntual();
+    // Controles
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enableZoom = true;
+    controls.enablePan = true;
 
+    // Cargar modelo GLB
+    const loader = new GLTFLoader();
+    loader.load('./modelos/esena5.glb', function (gltf) {
+        const model = gltf.scene;
+        scene.add(model);
+
+        // Animaciones
+        if (gltf.animations && gltf.animations.length) {
+            mixer = new THREE.AnimationMixer(model);
+            const action = mixer.clipAction(gltf.animations[0]);
+            action.play();
+        }
+
+        model.traverse(function (child) {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+
+        model.rotation.y = 4.5;
+        model.scale.set(0.21, 0.21, 0.21);
+
+        // Ajustar cámara y controles al centro del modelo
+        const box = new THREE.Box3().setFromObject(model);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        camera.position.set(center.x+3, center.y + 5, center.z + 20);
+        controls.target.copy(center);
+        controls.update();
+    });
+
+    // Redimensionamiento
     window.addEventListener('resize', onWindowResize);
+}
 
-    // Eventos para arrastrar el modelo con el mouse
-    document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mouseup', onMouseUp);
-    document.addEventListener('mousemove', onMouseMove);
+function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = clock.getDelta();
+    if (mixer) mixer.update(delta);
+
+    //controls.update(); 
+    renderer.render(scene, camera);
 }
 
 function onWindowResize() {
@@ -40,64 +88,48 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function onMouseDown(event) {
-    isMouseDown = true;
-    prevMouseX = event.clientX;
-    prevMouseY = event.clientY;
-}
+var abrirBotones = document.querySelectorAll('a[id^="abrir-modal-"]');
+    var cerrarBotones = document.querySelectorAll('.cerrar-modal');
+    var modales = document.querySelectorAll('.modal');
 
-function onMouseUp() {
-    isMouseDown = false;
-}
-
-function onMouseMove(event) {
-    if (!isMouseDown || !cube) return;
-
-    const deltaX = event.clientX - prevMouseX;
-    const deltaY = event.clientY - prevMouseY;
-
-    // Girar el modelo según el movimiento del mouse
-    cube.rotation.y += deltaX * 0.01; // horizontal
-    cube.rotation.x += deltaY * 0.01; // vertical
-
-    prevMouseX = event.clientX;
-    prevMouseY = event.clientY;
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-}
-
-function cargarModelo() {
-    loader.load(
-        'Iglesia.glb', // Asegúrate que esté en la misma carpeta
-        function (gltf) {
-            cube = gltf.scene;
-            const box = new THREE.Box3().setFromObject(cube);
-            const center = box.getCenter(new THREE.Vector3());
-            cube.position.sub(center);
-            cube.scale.set(0.8, 0.8, 0.8);
-            cube.rotation.y=-2;
-            scene.add(cube);
-            console.log("Modelo cargado correctamente");
-        },
-        function (xhr) {
-            console.log((xhr.loaded / xhr.total * 100) + '% cargado');
-        },
-        function (error) {
-            console.error('Error cargando el modelo. Verifica la ruta.', error);
+    // Función para abrir un modal
+    function abrirModal(modalId) {
+        var modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'block';
         }
-    );
-}
-function luzpuntual(){
-    const pointLight = new THREE.PointLight(0xffffff, 10);
-    pointLight.position.set(20, 30, 20);
-    pointLight.castShadow = true; // IMPORTANTE para que genere sombras
-    pointLight.shadow.mapSize.width = 1024;
-    pointLight.shadow.mapSize.height = 1024;
-    pointLight.shadow.radius = 4; // suaviza sombras
-    scene.add(pointLight);
-}
+    }
 
-window.onload = init;
+    // Función para cerrar un modal
+    function cerrarModal(modalElement) {
+        modalElement.style.display = 'none';
+    }
+
+    // Agregar evento a cada botón de "abrir"
+    abrirBotones.forEach(btn => {
+        btn.addEventListener('click', (event) => {
+            event.preventDefault(); // Evita que el enlace salte
+            // Obtiene el ID del modal a abrir del ID del enlace
+            const modalId = btn.id.replace('abrir-', '');
+            abrirModal(modalId);
+        });
+    });
+
+    // Agregar evento a cada botón de "cerrar" (la X)
+    cerrarBotones.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const modal = btn.closest('.modal');
+            if (modal) {
+                cerrarModal(modal);
+            }
+        });
+    });
+
+    // Cerrar el modal al hacer clic fuera de él
+    window.addEventListener('click', (event) => {
+        modales.forEach(modal => {
+            if (event.target === modal) {
+                cerrarModal(modal);
+            }
+        });
+    });
